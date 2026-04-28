@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Forge</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0a0a0a;
+  --surface:  #111111;
+  --surface2: #1a1a1a;
+  --surface3: #222222;
+  --border:   #2a2a2a;
+  --border2:  #333333;
+  --text:     #f0f0f0;
+  --text2:    #888888;
+  --text3:    #444444;
+  --orange:   #ff5500;
+  --orange-dim:#cc4400;
+  --orange-bg:rgba(255,85,0,0.10);
+  --orange-glow:rgba(255,85,0,0.25);
+  --green:    #22c55e;
+  --green-bg: rgba(34,197,94,0.10);
+  --red:      #ef4444;
+  --red-bg:   rgba(239,68,68,0.10);
+  --blue:     #3b82f6;
+  --blue-bg:  rgba(59,130,246,0.10);
+  --radius:   8px;
+  --radius-sm:5px;
+  --font:     'DM Sans', system-ui, sans-serif;
+  --font-display: 'Bebas Neue', sans-serif;
+  --header-h: 56px;
+  --tab-h:    48px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;overscroll-behavior:none;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* CONNECT / LOCK */
+#connectScreen{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:1000;flex-direction:column;padding:40px 20px;}
+#connectScreen.show{display:flex;}
+.lock-card{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:32px 24px;width:min(300px,88vw);display:flex;flex-direction:column;gap:16px;align-items:center;}
+.lock-wordmark{font-family:var(--font-display);font-size:3em;letter-spacing:0.05em;color:var(--text);line-height:1;}
+.lock-wordmark span{color:var(--orange);}
+.lock-subtitle{font-size:0.8em;color:var(--text2);text-align:center;line-height:1.55;margin-top:-8px;}
+.lock-btn{width:100%;padding:12px;background:var(--orange);border:none;color:#fff;font-size:0.9em;font-weight:600;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);transition:opacity 0.15s;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.03em;}
+.lock-btn:hover{opacity:0.88;}
+.lock-err{font-size:0.76em;color:var(--red);text-align:center;background:var(--red-bg);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-sm);padding:7px 10px;width:100%;display:none;}
+.lock-err.show{display:block;}
+
+/* APP SHELL */
+#app{display:none;flex-direction:column;height:100%;height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+
+/* HEADER */
+#header{height:var(--header-h);min-height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;}
+#header-wordmark{font-family:var(--font-display);font-size:1.8em;letter-spacing:0.08em;color:var(--text);flex:1;line-height:1;}
+#header-wordmark span{color:var(--orange);}
+.hdr-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:0.72em;padding:5px 10px;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);transition:all 0.15s;white-space:nowrap;}
+.hdr-btn:hover{border-color:var(--orange);color:var(--orange);}
+#syncDot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--text3);cursor:pointer;transition:background 0.3s;}
+#syncDot.synced{background:var(--green);}
+#syncDot.syncing{background:var(--orange);animation:pulse 1s infinite;}
+#syncDot.error{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* TAB BAR */
+#tabBar{height:var(--tab-h);min-height:var(--tab-h);display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.tab-item{flex:1;display:flex;align-items:center;justify-content:center;font-size:0.68em;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);cursor:pointer;transition:all 0.15s;border-bottom:2px solid transparent;}
+.tab-item.active{color:var(--orange);border-bottom-color:var(--orange);background:var(--orange-bg);}
+.tab-item:hover:not(.active){color:var(--text2);}
+
+/* CONTENT */
+#content{flex:1;overflow:hidden;}
+.tab-panel{display:none;width:100%;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px calc(32px + env(safe-area-inset-bottom));}
+.tab-panel.active{display:block;}
+
+/* CARDS & SECTIONS */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.section-label{font-family:var(--font-display);font-size:1.1em;letter-spacing:0.08em;color:var(--text);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);}
+.card-title{font-size:0.82em;font-weight:600;color:var(--text);letter-spacing:0.02em;}
+.card-body{padding:14px;}
+.add-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:0.72em;padding:5px 10px;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);transition:all 0.15s;display:flex;align-items:center;gap:4px;}
+.add-btn:hover{border-color:var(--orange);color:var(--orange);}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:0.85em;}
+.empty-state .ei{font-size:2em;margin-bottom:10px;}
+.del-btn{background:none;border:none;color:var(--text3);font-size:0.8em;cursor:pointer;padding:4px 6px;border-radius:4px;transition:all 0.15s;font-family:var(--font);}
+.del-btn:hover{color:var(--red);background:var(--red-bg);}
+
+/* SCHEDULE GRID */
+.sched-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px 4px;}
+.schedule-grid{display:grid;grid-template-columns:44px repeat(7,minmax(52px,1fr));gap:3px;margin-bottom:4px;min-width:430px;}
+.sched-day-hdr{font-size:0.65em;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);text-align:center;padding:4px 2px;}
+.sched-time-lbl{font-size:0.65em;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--orange);display:flex;align-items:center;padding:2px 4px;}
+.sched-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);min-height:58px;padding:5px 4px;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;position:relative;}
+.sched-block:hover{border-color:var(--orange);background:var(--surface2);}
+.sched-block.has-workout{border-color:var(--border2);background:var(--surface2);}
+.sched-block.has-workout:hover{border-color:var(--orange);}
+.sched-block-label{font-size:0.62em;font-weight:600;color:var(--orange);letter-spacing:0.03em;line-height:1.3;word-break:break-word;}
+.sched-block-empty{font-size:0.6em;color:var(--text3);}
+.sched-rest{background:var(--bg);border:1px dashed var(--border);opacity:0.5;}
+.sched-notes-area{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;color:var(--text);font-family:var(--font);font-size:0.85em;line-height:1.7;resize:vertical;outline:none;min-height:180px;transition:border-color 0.15s;}
+.sched-notes-area:focus{border-color:var(--orange);}
+.sched-notes-area::placeholder{color:var(--text3);}
+
+/* PLANS */
+.plan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+.plan-card-hdr{display:flex;align-items:center;gap:10px;padding:14px;border-bottom:1px solid var(--border);cursor:pointer;}
+.plan-color-bar{width:4px;height:36px;border-radius:2px;flex-shrink:0;}
+.plan-title{font-family:var(--font-display);font-size:1.2em;letter-spacing:0.05em;color:var(--text);flex:1;}
+.plan-meta{font-size:0.68em;color:var(--text3);}
+.plan-actions{display:flex;gap:6px;flex-shrink:0;}
+.plan-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:0.68em;padding:4px 9px;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);transition:all 0.15s;white-space:nowrap;}
+.plan-btn:hover{border-color:var(--orange);color:var(--orange);}
+.plan-btn.activate{background:var(--orange);border-color:var(--orange);color:#fff;font-weight:600;}
+.plan-btn.activate:hover{opacity:0.88;}
+.plan-body{padding:14px;display:none;}
+.plan-body.open{display:block;}
+.phase-hdr{font-family:var(--font-display);font-size:0.9em;letter-spacing:0.06em;color:var(--orange);margin-bottom:8px;margin-top:12px;padding-bottom:4px;border-bottom:1px solid var(--border);}
+.phase-hdr:first-child{margin-top:0;}
+.week-hdr{font-size:0.7em;font-weight:700;color:var(--text2);letter-spacing:0.05em;text-transform:uppercase;margin:8px 0 4px;display:flex;align-items:center;gap:8px;}
+.week-hdr::after{content:'';flex:1;height:1px;background:var(--border);}
+.workout-day-row{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;overflow:hidden;}
+.workout-day-hdr{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;}
+.workout-day-name{font-size:0.78em;font-weight:600;color:var(--text);flex:1;}
+.workout-day-exercises{padding:0 10px 8px;display:none;}
+.workout-day-exercises.open{display:block;}
+.ex-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.ex-table{width:100%;border-collapse:collapse;font-size:0.78em;min-width:max-content;}
+.ex-table th{background:var(--surface3);color:var(--text3);font-size:0.68em;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:5px 8px;border:1px solid var(--border);text-align:center;white-space:nowrap;}
+.ex-table th.ex-name-hdr{text-align:left;min-width:130px;}
+.ex-table td{border:1px solid var(--border);padding:3px 4px;vertical-align:middle;}
+.ex-table tr:hover td{background:var(--surface2);}
+.ex-name-cell{outline:none;color:var(--text);padding:4px 6px;min-width:130px;font-size:0.88em;}
+.ex-name-cell:empty:before{content:'Exercise name';color:var(--text3);pointer-events:none;}
+.ex-cell-input{background:transparent;border:none;color:var(--text);font-size:0.82em;padding:4px 5px;width:52px;text-align:center;font-family:var(--font);outline:none;}
+.ex-cell-input:focus{background:var(--surface3);border-radius:3px;}
+.ex-cell-input::placeholder{color:var(--text3);}
+.ex-row-del{background:none;border:none;color:var(--text3);cursor:pointer;padding:3px 5px;font-size:0.75em;font-family:var(--font);transition:color 0.15s;}
+.ex-row-del:hover{color:var(--red);}
+.set-sep{font-size:0.65em;color:var(--text3);}
+
+/* INSTANCE CARDS (active plan logs) */
+.instance-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;}
+.instance-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.instance-badge{background:var(--orange);color:#fff;font-size:0.6em;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:0.05em;}
+.instance-title{font-size:0.88em;font-weight:600;color:var(--text);flex:1;}
+.instance-meta{font-size:0.68em;color:var(--text3);}
+.log-session-btn{background:var(--orange);border:none;color:#fff;font-size:0.72em;padding:5px 10px;border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);font-weight:600;}
+.log-day-row{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;}
+.log-day-row:last-child{border-bottom:none;}
+.log-day-row:hover{background:var(--surface2);}
+.log-day-name{font-size:0.82em;color:var(--text);flex:1;}
+.log-day-status{font-size:0.65em;font-weight:700;padding:2px 7px;border-radius:20px;}
+.log-done{background:var(--green-bg);color:var(--green);}
+.log-pending{background:var(--surface3);color:var(--text3);}
+
+/* PROGRESS */
+.pr-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+.pr-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px;}
+.pr-name{font-family:var(--font-display);font-size:1.1em;letter-spacing:0.05em;color:var(--text);flex:1;}
+.pr-current{font-family:var(--font-display);font-size:1.8em;color:var(--orange);letter-spacing:0.04em;line-height:1;}
+.pr-unit{font-size:0.65em;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-top:2px;}
+.pr-chart{padding:0 14px 10px;height:80px;position:relative;}
+.pr-log-list{max-height:120px;overflow-y:auto;}
+.pr-log-row{display:flex;align-items:center;gap:10px;padding:6px 14px;border-top:1px solid var(--border);font-size:0.78em;}
+.pr-log-date{color:var(--text3);width:76px;flex-shrink:0;}
+.pr-log-val{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+.pr-log-note{color:var(--text2);flex:1;font-size:0.9em;}
+.pr-delta-pos{font-size:0.68em;color:var(--green);margin-left:4px;}
+.pr-delta-neg{font-size:0.68em;color:var(--red);margin-left:4px;}
+
+/* GOALS */
+.goal-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+.goal-card-hdr{display:flex;align-items:center;gap:10px;padding:14px;}
+.goal-accent{width:4px;height:40px;border-radius:2px;flex-shrink:0;}
+.goal-title{font-family:var(--font-display);font-size:1.15em;letter-spacing:0.05em;color:var(--text);flex:1;}
+.goal-status{font-size:0.65em;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid transparent;}
+.gs-active{background:var(--orange-bg);color:var(--orange);border-color:rgba(255,85,0,0.3);}
+.gs-achieved{background:var(--green-bg);color:var(--green);border-color:rgba(34,197,94,0.3);}
+.gs-planned{background:var(--surface3);color:var(--text2);border-color:var(--border);}
+.goal-body{padding:0 14px 14px;display:none;}
+.goal-body.open{display:block;}
+.goal-desc{font-size:0.82em;color:var(--text2);line-height:1.6;margin-bottom:10px;outline:none;min-height:40px;}
+.goal-desc:empty:before{content:'Add description, milestones, notes…';color:var(--text3);pointer-events:none;}
+.goal-target{display:inline-flex;align-items:center;gap:6px;font-size:0.72em;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;margin-bottom:8px;}
+.goal-target-date{color:var(--orange);font-weight:600;}
+
+/* MODALS */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:200;align-items:flex-start;justify-content:center;overflow-y:auto;padding:env(safe-area-inset-top,20px) 12px env(safe-area-inset-bottom,20px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:22px;width:min(500px,100%);display:flex;flex-direction:column;gap:14px;margin:auto;}
+.modal h3{font-family:var(--font-display);font-size:1.3em;letter-spacing:0.06em;color:var(--text);}
+.form-row{display:flex;flex-direction:column;gap:5px;}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-label{font-size:0.68em;font-weight:700;color:var(--text2);letter-spacing:0.07em;text-transform:uppercase;}
+.form-input,.form-select,.form-textarea{background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:0.88em;padding:9px 11px;border-radius:var(--radius-sm);font-family:var(--font);outline:none;transition:border-color 0.15s;width:100%;}
+.form-textarea{min-height:80px;resize:vertical;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--orange);}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--text3);}
+.btn-row{display:flex;gap:8px;}
+.btn{flex:1;padding:10px 14px;border-radius:var(--radius-sm);font-size:0.83em;font-weight:600;cursor:pointer;font-family:var(--font);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);transition:all 0.15s;}
+.btn:hover{border-color:var(--orange);color:var(--orange);}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#fff;}
+.btn.primary:hover{opacity:0.9;}
+.btn.danger{color:var(--red);}
+.btn.danger:hover{border-color:var(--red);background:var(--red-bg);}
+
+/* LOG SESSION MODAL */
+.log-exercise-row{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;}
+.log-ex-name{font-size:0.85em;font-weight:600;color:var(--text);margin-bottom:8px;}
+.log-sets-grid{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:6px;align-items:center;}
+.log-sets-hdr{font-size:0.62em;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;text-align:center;}
+.log-set-num{font-size:0.72em;color:var(--text3);text-align:center;}
+.log-input{background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:0.82em;padding:5px 8px;border-radius:4px;font-family:var(--font);outline:none;width:100%;text-align:center;}
+.log-input:focus{border-color:var(--orange);}
+
+/* SETTINGS */
+.s-row{display:flex;gap:8px;flex-wrap:wrap;}
+.s-btn{flex:1;padding:9px 14px;border-radius:var(--radius-sm);font-size:0.83em;font-weight:600;cursor:pointer;font-family:var(--font);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);transition:all 0.15s;white-space:nowrap;}
+.s-btn:hover{border-color:var(--orange);color:var(--orange);}
+.s-btn.danger{color:var(--red);}
+.s-btn.danger:hover{border-color:var(--red);background:var(--red-bg);}
+
+/* COLORS */
+.plan-colors{display:flex;gap:6px;flex-wrap:wrap;}
+.pc-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform 0.12s;}
+.pc-swatch:hover{transform:scale(1.2);}
+.pc-swatch.selected{border-color:var(--text);}
+
+@media(pointer:coarse){.add-btn,.hdr-btn,.plan-btn,.log-session-btn{min-height:36px;} .sched-block{min-height:64px;}}
+</style>
+</head>
+<body>
+
+<!-- CONNECT SCREEN -->
+<div id="connectScreen">
+  <div class="lock-card">
+    <div class="lock-wordmark">FORGE<span>.</span></div>
+    <div class="lock-subtitle">Connect your Dropbox to sync your training data.</div>
+    <button onclick="startOAuth()" class="lock-btn">
+      <svg width="18" height="18" viewBox="0 0 40 40" fill="none"><path d="M10 5L20 12L10 19L0 12Z" fill="white"/><path d="M30 5L40 12L30 19L20 12Z" fill="white"/><path d="M0 26L10 19L20 26L10 33Z" fill="white"/><path d="M20 26L30 19L40 26L30 33Z" fill="white"/><path d="M10 35L20 28L30 35L20 42Z" fill="white"/></svg>
+      Connect to Dropbox
+    </button>
+    <div id="connectErr" class="lock-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="header">
+    <div id="header-wordmark">FORGE<span>.</span></div>
+    <div id="syncDot" onclick="syncNow()" title="Sync"></div>
+    <button class="hdr-btn" onclick="openSettings()">⚙</button>
+  </div>
+  <div id="tabBar">
+    <div class="tab-item active" onclick="switchTab('schedule',this)">Schedule</div>
+    <div class="tab-item" onclick="switchTab('plans',this)">Plans</div>
+    <div class="tab-item" onclick="switchTab('progress',this)">Progress</div>
+    <div class="tab-item" onclick="switchTab('goals',this)">Goals</div>
+  </div>
+  <div id="content">
+
+    <!-- SCHEDULE -->
+    <div id="panel-schedule" class="tab-panel active">
+      <div class="section-header" style="margin-bottom:14px">
+        <div style="display:flex;align-items:baseline;gap:10px;flex:1">
+          <div class="section-label">Weekly Schedule</div>
+          <div id="schedUpdatedLabel" contenteditable="true"
+            style="font-size:0.72em;color:var(--text3);font-weight:400;outline:none;min-width:20px;cursor:text;border-bottom:1px dashed transparent;transition:border-color 0.15s"
+            onfocus="this.style.borderColor='var(--text3)'"
+            onblur="saveSchedUpdated(this)"
+            title="Click to edit update date">—</div>
+        </div>
+        <button class="add-btn" onclick="clearSchedule()">Clear All</button>
+      </div>
+      <div id="scheduleGrid"></div>
+      <div style="font-size:0.7em;color:var(--text3);text-align:center;margin-top:8px;margin-bottom:18px">Tap a block to assign a workout label</div>
+      <div class="section-header" style="margin-bottom:8px">
+        <div class="section-label" style="font-size:0.85em">Notes</div>
+      </div>
+      <textarea id="schedNotes" class="sched-notes-area" placeholder="Short Run - 5k&#10;Med Run - 10k&#10;Long Run - 15k&#10;Race pace notes…" onblur="saveSchedNotes()"></textarea>
+    </div>
+
+    <!-- PLANS -->
+    <div id="panel-plans" class="tab-panel">
+      <div class="section-header">
+        <div class="section-label">Workout Plans</div>
+        <button class="add-btn" onclick="openPlanModal()">+ Plan</button>
+      </div>
+      <div style="font-size:0.7em;color:var(--text2);margin-bottom:14px;line-height:1.5">
+        Build a workout plan template, then <strong style="color:var(--orange)">Activate</strong> it to create a log instance for tracking your sessions.
+      </div>
+      <div id="plansList"></div>
+      <div style="margin-top:20px">
+        <div class="section-header"><div class="section-label" style="font-size:0.9em">Active Logs</div></div>
+        <div id="instancesList"></div>
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div id="panel-progress" class="tab-panel">
+      <div class="section-header">
+        <div class="section-label">Personal Records</div>
+        <button class="add-btn" onclick="openPRModal()">+ Metric</button>
+      </div>
+      <div id="prList"></div>
+    </div>
+
+    <!-- GOALS -->
+    <div id="panel-goals" class="tab-panel">
+      <div class="section-header">
+        <div class="section-label">Fitness Goals</div>
+        <button class="add-btn" onclick="openGoalModal()">+ Goal</button>
+      </div>
+      <div id="goalsList"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SCHEDULE BLOCK MODAL -->
+<div id="schedBlockOverlay" class="modal-overlay" onclick="if(event.target.id==='schedBlockOverlay')closeSchedBlock()">
+  <div class="modal">
+    <h3 id="schedBlockTitle">Monday AM</h3>
+    <div class="form-row">
+      <div class="form-label">Workout Label <span style="font-weight:400;text-transform:none;font-size:0.9em;color:var(--text3)">(Enter for new line)</span></div>
+      <textarea id="schedBlockInput" class="form-input" placeholder="e.g. Bike to Gym&#10;Chest &amp; Tris" rows="3" style="resize:none;line-height:1.5"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="saveSchedBlock()">Save</button>
+      <button class="btn danger" onclick="clearSchedBlock()">Clear</button>
+      <button class="btn" onclick="closeSchedBlock()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAN MODAL -->
+<div id="planOverlay" class="modal-overlay" onclick="if(event.target.id==='planOverlay')closePlanModal()">
+  <div class="modal">
+    <h3 id="planModalTitle">New Plan</h3>
+    <div class="form-row">
+      <div class="form-label">Plan Name</div>
+      <input type="text" id="planName" class="form-input" placeholder="e.g. Shortcut to Size">
+    </div>
+    <div class="form-row">
+      <div class="form-label">Description</div>
+      <input type="text" id="planDesc" class="form-input" placeholder="e.g. 4 phases, 4 weeks each">
+    </div>
+    <div class="form-row">
+      <div class="form-label">Color</div>
+      <div class="plan-colors" id="planColorPicker"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="savePlan()">Save</button>
+      <button class="btn danger" id="planDeleteBtn" onclick="deletePlan()" style="display:none">Delete</button>
+      <button class="btn" onclick="closePlanModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG SESSION MODAL -->
+<div id="logSessionOverlay" class="modal-overlay" onclick="if(event.target.id==='logSessionOverlay')closeLogSession()">
+  <div class="modal" style="width:min(560px,100%)">
+    <h3 id="logSessionTitle">Log Session</h3>
+    <div style="font-size:0.78em;color:var(--text2);margin-top:-6px" id="logSessionSubtitle"></div>
+    <div id="logSessionBody"></div>
+    <div class="form-row">
+      <div class="form-label">Session Notes (optional)</div>
+      <textarea id="logSessionNotes" class="form-textarea" placeholder="How did it feel? PRs? Adjustments…" style="min-height:60px"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="saveLogSession()">Save Session</button>
+      <button class="btn" onclick="closeLogSession()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- PR MODAL -->
+<div id="prOverlay" class="modal-overlay" onclick="if(event.target.id==='prOverlay')closePRModal()">
+  <div class="modal">
+    <h3 id="prModalTitle">New Metric</h3>
+    <div class="form-row">
+      <div class="form-label">Name</div>
+      <input type="text" id="prName" class="form-input" placeholder="e.g. Max Bench, Mile Time, Pull-ups">
+    </div>
+    <div class="form-row-2">
+      <div class="form-row">
+        <div class="form-label">Unit</div>
+        <input type="text" id="prUnit" class="form-input" placeholder="lbs, min, reps">
+      </div>
+      <div class="form-row">
+        <div class="form-label">Direction</div>
+        <select id="prDir" class="form-select">
+          <option value="up">Higher is better (lbs, reps)</option>
+          <option value="down">Lower is better (time, weight)</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="savePR()">Save</button>
+      <button class="btn danger" id="prDeleteBtn" onclick="deletePR()" style="display:none">Delete Metric</button>
+      <button class="btn" onclick="closePRModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG PR ENTRY MODAL -->
+<div id="prLogOverlay" class="modal-overlay" onclick="if(event.target.id==='prLogOverlay')closePRLog()">
+  <div class="modal">
+    <h3 id="prLogTitle">Log Entry</h3>
+    <div class="form-row-2">
+      <div class="form-row">
+        <div class="form-label">Value</div>
+        <input type="number" id="prLogVal" class="form-input" placeholder="0" step="any">
+      </div>
+      <div class="form-row">
+        <div class="form-label">Date</div>
+        <input type="date" id="prLogDate" class="form-input">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-label">Note (optional)</div>
+      <input type="text" id="prLogNote" class="form-input" placeholder="Context, conditions, feelings…">
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="savePRLog()">Log It</button>
+      <button class="btn" onclick="closePRLog()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOAL MODAL -->
+<div id="goalOverlay" class="modal-overlay" onclick="if(event.target.id==='goalOverlay')closeGoalModal()">
+  <div class="modal">
+    <h3 id="goalModalTitle">New Goal</h3>
+    <div class="form-row">
+      <div class="form-label">Goal Name</div>
+      <input type="text" id="goalName" class="form-input" placeholder="e.g. Full Ironman, Bay Swim">
+    </div>
+    <div class="form-row-2">
+      <div class="form-row">
+        <div class="form-label">Target Date</div>
+        <input type="date" id="goalDate" class="form-input">
+      </div>
+      <div class="form-row">
+        <div class="form-label">Status</div>
+        <select id="goalStatus" class="form-select">
+          <option value="planned">Planned</option>
+          <option value="active">Active</option>
+          <option value="achieved">Achieved ✓</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-label">Color</div>
+      <div class="plan-colors" id="goalColorPicker"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="saveGoal()">Save</button>
+      <button class="btn danger" id="goalDeleteBtn" onclick="deleteGoal()" style="display:none">Delete</button>
+      <button class="btn" onclick="closeGoalModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsOverlay" class="modal-overlay" onclick="if(event.target.id==='settingsOverlay')closeSettings()">
+  <div class="modal">
+    <h3>SETTINGS</h3>
+    <div style="font-size:0.8em;color:var(--text2);line-height:1.6">Connected to Dropbox via OAuth. Syncs to <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">forge.json</code>.</div>
+    <div style="font-size:0.68em;color:var(--text3)">Version <strong style="color:var(--text2)">2025-01-forge-v1</strong></div>
+    <div class="s-row">
+      <button class="s-btn" onclick="syncNow()">↻ Sync Now</button>
+      <button class="s-btn danger" onclick="disconnectDropbox()">Disconnect Dropbox</button>
+    </div>
+    <div class="s-row">
+      <button class="s-btn danger" onclick="resetAll()">⚠ Reset Everything</button>
+      <button class="s-btn" onclick="closeSettings()">Close</button>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════════════
+//  OAUTH (no PIN — Dropbox-only auth)
+// ══════════════════════════════════════════════════════════════════
+const DBX_APP_KEY='YOUR_APP_KEY_HERE';
+const REDIRECT_URI=window.location.origin+window.location.pathname.replace(/\/$/,'');
+const DBX_PATH='/forge.json';
+let _cachedToken=null,_tokenExpiry=0,syncTimer=null;
+const _e=new TextEncoder();
+
+function b64url(buf){
+  let s='';const a=new Uint8Array(buf);
+  for(let i=0;i<a.length;i+=8192)s+=String.fromCharCode(...a.subarray(i,i+8192));
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+async function sha256(s){return crypto.subtle.digest('SHA-256',_e.encode(s));}
+function randStr(n=64){const a=new Uint8Array(n);crypto.getRandomValues(a);return b64url(a);}
+
+async function startOAuth(){
+  if(DBX_APP_KEY==='YOUR_APP_KEY_HERE'){
+    document.getElementById('connectErr').innerText='App key not set — open the file and set DBX_APP_KEY.';
+    document.getElementById('connectErr').classList.add('show');return;
+  }
+  const v=randStr(64),ch=b64url(await sha256(v));
+  sessionStorage.setItem('fg_verifier',v);
+  const p=new URLSearchParams({client_id:DBX_APP_KEY,redirect_uri:REDIRECT_URI,response_type:'code',code_challenge:ch,code_challenge_method:'S256',token_access_type:'offline'});
+  window.location.href='https://www.dropbox.com/oauth2/authorize?'+p;
+}
+async function handleOAuthCallback(code){
+  const v=sessionStorage.getItem('fg_verifier');if(!v)throw new Error('No verifier.');
+  const res=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({code,grant_type:'authorization_code',client_id:DBX_APP_KEY,redirect_uri:REDIRECT_URI,code_verifier:v})});
+  if(!res.ok)throw new Error('Token exchange failed: '+(await res.text()));
+  const json=await res.json();if(!json.refresh_token)throw new Error('No refresh token.');
+  localStorage.setItem('fg_refresh_token',json.refresh_token);
+  _cachedToken=json.access_token;_tokenExpiry=Date.now()+(json.expires_in||14400)*1000-60000;
+  sessionStorage.removeItem('fg_verifier');
+  window.history.replaceState({},document.title,window.location.pathname);
+}
+async function getToken(){
+  if(_cachedToken&&Date.now()<_tokenExpiry)return _cachedToken;
+  const refresh=localStorage.getItem('fg_refresh_token');if(!refresh)return null;
+  try{
+    const res=await fetch('https://api.dropboxapi.com/oauth2/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:refresh,client_id:DBX_APP_KEY})});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const json=await res.json();_cachedToken=json.access_token;_tokenExpiry=Date.now()+(json.expires_in||14400)*1000-60000;return _cachedToken;
+  }catch(e){_cachedToken=null;localStorage.removeItem('fg_refresh_token');showConnectScreen();return null;}
+}
+const isConnected=()=>!!localStorage.getItem('fg_refresh_token');
+const setSyncStatus=s=>{const d=document.getElementById('syncDot');if(d)d.className=s;};
+
+async function loadFromDropbox(){
+  const token=await getToken();if(!token){setSyncStatus('offline');return null;}
+  setSyncStatus('syncing');
+  try{
+    const res=await fetch('https://content.dropboxapi.com/2/files/download',{method:'POST',headers:{'Authorization':'Bearer '+token,'Dropbox-API-Arg':JSON.stringify({path:DBX_PATH})}});
+    if(res.status===409){setSyncStatus('synced');return 'empty';}
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const parsed=JSON.parse(await res.text());
+    setSyncStatus('synced');return parsed;
+  }catch(e){setSyncStatus('error');return null;}
+}
+async function saveToDropbox(){
+  const token=await getToken();if(!token){setSyncStatus('offline');return false;}
+  setSyncStatus('syncing');
+  try{
+    const res=await fetch('https://content.dropboxapi.com/2/files/upload',{method:'POST',headers:{'Authorization':'Bearer '+token,'Dropbox-API-Arg':JSON.stringify({path:DBX_PATH,mode:'overwrite',autorename:false,mute:true}),'Content-Type':'application/octet-stream'},body:JSON.stringify(data,null,2)});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    setSyncStatus('synced');return true;
+  }catch(e){setSyncStatus('error');return false;}
+}
+function scheduleSync(){
+  try{localStorage.setItem('fg_data',JSON.stringify(data));}catch(e){}
+  clearTimeout(syncTimer);setSyncStatus('syncing');
+  syncTimer=setTimeout(()=>saveToDropbox(),2000);
+}
+async function syncNow(){clearTimeout(syncTimer);await saveToDropbox();closeSettings();}
+function showConnectScreen(){document.getElementById('connectScreen').classList.add('show');document.getElementById('app').style.display='none';}
+function hideConnectScreen(){document.getElementById('connectScreen').classList.remove('show');}
+async function disconnectDropbox(){if(!confirm('Disconnect Dropbox?'))return;localStorage.removeItem('fg_refresh_token');_cachedToken=null;closeSettings();showConnectScreen();}
+function resetAll(){if(!confirm('Reset ALL data? This cannot be undone.'))return;localStorage.clear();location.reload();}
+
+// ══════════════════════════════════════════════════════════════════
+//  DATA MODEL
+// ══════════════════════════════════════════════════════════════════
+function emptyData(){return {
+  schedule:{},    // {"Mon-AM":"Chest Day","Mon-PM":"","Tue-AM":...}
+  plans:[],       // [{id,name,desc,color,phases:[{name,weeks:[{name,days:[{name,exercises:[{id,name,sets:[{reps,weight,notes}]}]}]}]}]}]
+  instances:[],   // [{id,planId,planName,startDate,logs:{dayKey:[{date,sets:[{reps,weight,notes}],sessionNotes}]},status:'active'|'complete'}]
+  prMetrics:[],   // [{id,name,unit,dir,entries:[{date,value,note}]}]
+  goals:[],       // [{id,name,targetDate,status,color,notes}]
+  _v:0
+};}
+let data=emptyData();
+const uid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4);
+const escHtml=s=>!s?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const TIMES=['AM','PM'];
+const PLAN_COLORS=['#ff5500','#3b82f6','#22c55e','#a855f7','#ec4899','#f59e0b','#06b6d4','#64748b'];
+const GOAL_COLORS=['#ff5500','#3b82f6','#22c55e','#a855f7','#ec4899','#f59e0b','#06b6d4','#ef4444'];
+
+function loadLocal(){try{const r=localStorage.getItem('fg_data');if(r){const p=JSON.parse(r);if(p&&p.plans)data=p;}}catch(e){}}
+
+// ══════════════════════════════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════════════════════════════
+function switchTab(id,el){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if(el)el.classList.add('active');
+}
+function openSettings(){document.getElementById('settingsOverlay').classList.add('open');}
+function closeSettings(){document.getElementById('settingsOverlay').classList.remove('open');}
+
+// ══════════════════════════════════════════════════════════════════
+//  SCHEDULE
+// ══════════════════════════════════════════════════════════════════
+let _schedKey=null;
+
+function renderSchedule(){
+  const grid=document.getElementById('scheduleGrid');grid.innerHTML='';
+  // Restore notes
+  const notesEl=document.getElementById('schedNotes');
+  if(notesEl)notesEl.value=data.scheduleNotes||'';
+  const updEl=document.getElementById('schedUpdatedLabel');
+  if(updEl)updEl.innerText=data.scheduleUpdated||'—';
+  const scrollWrap=document.createElement('div');scrollWrap.className='sched-scroll-wrap';
+  const g=document.createElement('div');g.className='schedule-grid';
+  // Header row
+  const empty=document.createElement('div');g.appendChild(empty);
+  DAYS.forEach(d=>{const hdr=document.createElement('div');hdr.className='sched-day-hdr';hdr.textContent=d;g.appendChild(hdr);});
+  // AM and PM rows
+  TIMES.forEach(t=>{
+    const lbl=document.createElement('div');lbl.className='sched-time-lbl';lbl.textContent=t;g.appendChild(lbl);
+    DAYS.forEach(d=>{
+      const key=`${d}-${t}`;
+      const val=(data.schedule||{})[key]||'';
+      const block=document.createElement('div');
+      block.className='sched-block'+(val?' has-workout':'');
+      block.innerHTML=val
+        ?`<div class="sched-block-label" style="white-space:pre-line">${escHtml(val)}</div>`
+        :`<div class="sched-block-empty">+</div>`;
+      block.onclick=()=>openSchedBlock(key,`${d} ${t}`);
+      g.appendChild(block);
+    });
+  });
+  scrollWrap.appendChild(g);
+  grid.appendChild(scrollWrap);
+}
+
+function openSchedBlock(key,label){
+  _schedKey=key;
+  document.getElementById('schedBlockTitle').textContent=label;
+  document.getElementById('schedBlockInput').value=(data.schedule||{})[key]||'';
+  document.getElementById('schedBlockOverlay').classList.add('open');
+  setTimeout(()=>{const t=document.getElementById('schedBlockInput');t.focus();t.setSelectionRange(t.value.length,t.value.length);},50);
+}
+function closeSchedBlock(){document.getElementById('schedBlockOverlay').classList.remove('open');_schedKey=null;}
+function saveSchedBlock(){
+  if(!_schedKey)return;
+  if(!data.schedule)data.schedule={};
+  data.schedule[_schedKey]=document.getElementById('schedBlockInput').value.replace(/^\n+|\n+$/g,'');
+  closeSchedBlock();scheduleSync();renderSchedule();
+}
+function clearSchedBlock(){
+  if(!_schedKey)return;
+  if(data.schedule)data.schedule[_schedKey]='';
+  closeSchedBlock();scheduleSync();renderSchedule();
+}
+function clearSchedule(){if(!confirm('Clear entire schedule?'))return;data.schedule={};scheduleSync();renderSchedule();}
+function saveSchedUpdated(el){
+  data.scheduleUpdated=el.innerText.trim()||'';
+  scheduleSync();
+}
+function saveSchedNotes(){
+  if(!data.scheduleNotes===undefined)data.scheduleNotes='';
+  data.scheduleNotes=document.getElementById('schedNotes').value;
+  scheduleSync();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  PLANS
+// ══════════════════════════════════════════════════════════════════
+let _editPlanId=null;
+
+function renderPlans(){
+  renderPlansList();renderInstancesList();
+}
+
+function renderPlansList(){
+  const list=document.getElementById('plansList');
+  if(!data.plans.length){list.innerHTML='<div class="empty-state"><div class="ei">📋</div>No plans yet.<br>Create a plan template to get started.</div>';return;}
+  list.innerHTML='';
+  data.plans.forEach(p=>{
+    const card=document.createElement('div');card.className='plan-card';
+    const phases=p.phases||[];
+    const totalDays=phases.reduce((a,ph)=>a+ph.weeks.reduce((b,w)=>b+w.days.length,0),0);
+    card.innerHTML=`
+      <div class="plan-card-hdr" onclick="togglePlanBody('${p.id}')">
+        <div class="plan-color-bar" style="background:${p.color||PLAN_COLORS[0]}"></div>
+        <div><div class="plan-title">${escHtml(p.name)}</div><div class="plan-meta">${phases.length} phase${phases.length!==1?'s':''} · ${totalDays} workout days · ${escHtml(p.desc||'')}</div></div>
+        <div class="plan-actions" onclick="event.stopPropagation()">
+          <button class="plan-btn" onclick="openPlanModal('${p.id}')">Edit</button>
+          <button class="plan-btn activate" onclick="activatePlan('${p.id}')">▶ Activate</button>
+        </div>
+      </div>
+      <div class="plan-body" id="plan-body-${p.id}">
+        <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="add-btn" onclick="addPhase('${p.id}')">+ Phase</button>
+        </div>
+        <div id="plan-phases-${p.id}"></div>
+      </div>`;
+    list.appendChild(card);
+    renderPlanPhases(p);
+  });
+}
+
+function togglePlanBody(pid){
+  const body=document.getElementById('plan-body-'+pid);
+  if(body)body.classList.toggle('open');
+}
+
+function renderPlanPhases(p){
+  const container=document.getElementById('plan-phases-'+p.id);if(!container)return;
+  container.innerHTML='';
+  (p.phases||[]).forEach((ph,pi)=>{
+    const phDiv=document.createElement('div');
+    phDiv.innerHTML=`<div class="phase-hdr" style="display:flex;align-items:center;justify-content:space-between">
+      <span contenteditable="true" onblur="updatePhaseName('${p.id}',${pi},this)" style="outline:none;cursor:text" title="Click to edit">${escHtml(ph.name||'Phase '+(pi+1))}</span>
+      <div style="display:flex;gap:6px">
+        <button class="add-btn" style="font-size:0.65em;padding:2px 7px" onclick="addWeek('${p.id}',${pi})">+ Week</button>
+        <button class="del-btn" onclick="deletePhase('${p.id}',${pi})">✕</button>
+      </div>
+    </div>`;
+    // Attach phDiv to DOM immediately so getElementById works for exercises
+    container.appendChild(phDiv);
+    (ph.weeks||[]).forEach((w,wi)=>{
+      const wDiv=document.createElement('div');
+      wDiv.innerHTML=`<div class="week-hdr">
+        <span contenteditable="true" onblur="updateWeekName('${p.id}',${pi},${wi},this)" style="outline:none;cursor:text">${escHtml(w.name||'Week '+(wi+1))}</span>
+        <button class="add-btn" style="font-size:0.62em;padding:1px 6px" onclick="addWorkoutDay('${p.id}',${pi},${wi})">+ Day</button>
+        <button class="del-btn" style="font-size:0.7em" onclick="deleteWeek('${p.id}',${pi},${wi})">✕</button>
+      </div>`;
+      phDiv.appendChild(wDiv);
+      (w.days||[]).forEach((day,di)=>{
+        const dRow=document.createElement('div');dRow.className='workout-day-row';
+        const exCount=(day.exercises||[]).length;
+        dRow.innerHTML=`
+          <div class="workout-day-hdr" onclick="toggleDayExercises('${p.id}-${pi}-${wi}-${di}')">
+            <div class="workout-day-name">${escHtml(day.name||'Day '+(di+1))}</div>
+            <span style="font-size:0.68em;color:var(--text3)">${exCount} exercise${exCount!==1?'s':''}</span>
+            <button class="del-btn" onclick="event.stopPropagation();deleteDay('${p.id}',${pi},${wi},${di})">✕</button>
+          </div>
+          <div class="workout-day-exercises open" id="day-ex-${p.id}-${pi}-${wi}-${di}">
+            <div id="exercises-${p.id}-${pi}-${wi}-${di}"></div>
+          </div>`;
+        // rename day inline
+        const nameEl=dRow.querySelector('.workout-day-name');
+        nameEl.contentEditable=true;nameEl.style.outline='none';nameEl.style.cursor='text';
+        nameEl.addEventListener('blur',()=>updateDayName(p.id,pi,wi,di,nameEl));
+        nameEl.addEventListener('click',e=>e.stopPropagation());
+        // Attach to DOM before rendering exercises so getElementById finds the container
+        wDiv.appendChild(dRow);
+        renderExercises(p,pi,wi,di);
+      });
+      phDiv.appendChild(wDiv);
+    });
+  });
+}
+
+function toggleDayExercises(key){const el=document.getElementById('day-ex-'+key);if(el)el.classList.toggle('open');}
+
+function renderExercises(p,pi,wi,di){
+  const container=document.getElementById(`exercises-${p.id}-${pi}-${wi}-${di}`);if(!container)return;
+  const day=p.phases[pi].weeks[wi].days[di];container.innerHTML='';
+  const exercises=day.exercises||[];
+
+  // Determine max set count across all exercises for column headers
+  const maxSets=Math.max(1,...exercises.map(ex=>(ex.sets||[]).length));
+
+  // Small toolbar above table
+  const toolbar=document.createElement('div');
+  toolbar.style.cssText='display:flex;justify-content:flex-end;padding:4px 0 6px;';
+  const collapseBtn=document.createElement('button');
+  collapseBtn.className='add-btn';collapseBtn.style.cssText='font-size:0.62em;padding:2px 7px;';
+  collapseBtn.textContent='▲ Collapse';
+  collapseBtn.onclick=()=>toggleDayExercises(`${p.id}-${pi}-${wi}-${di}`);
+  toolbar.appendChild(collapseBtn);
+  container.appendChild(toolbar);
+
+  // Wrapper for horizontal scroll
+  const wrap=document.createElement('div');wrap.className='ex-table-wrap';
+  const table=document.createElement('table');table.className='ex-table';
+
+  // ── Header: two-level (SET N spans Wt+Reps) ──
+  const thead=document.createElement('thead');
+
+  // Row 1: Exercise | Scheme | SET 1 (span 2) | SET 2 (span 2) | … | +Set |
+  const hdrRow1=document.createElement('tr');
+  const nameTh=document.createElement('th');nameTh.className='ex-name-hdr';nameTh.rowSpan=2;nameTh.textContent='Exercise';hdrRow1.appendChild(nameTh);
+  const schemeTh=document.createElement('th');schemeTh.rowSpan=2;schemeTh.style.minWidth='72px';schemeTh.textContent='Set × Reps';hdrRow1.appendChild(schemeTh);
+  for(let si=0;si<maxSets;si++){
+    const setTh=document.createElement('th');setTh.colSpan=2;setTh.textContent=`Set ${si+1}`;
+    setTh.style.cssText='border-bottom:1px solid var(--border);color:var(--orange);';
+    hdrRow1.appendChild(setTh);
+  }
+  const addSetTh=document.createElement('th');addSetTh.rowSpan=2;
+  const addSetBtn=document.createElement('button');
+  addSetBtn.className='add-btn';addSetBtn.style.cssText='font-size:0.6em;padding:2px 6px;white-space:nowrap';
+  addSetBtn.textContent='+ Set';addSetBtn.onclick=()=>addSetColumn(p.id,pi,wi,di);
+  addSetTh.appendChild(addSetBtn);hdrRow1.appendChild(addSetTh);
+  hdrRow1.appendChild(Object.assign(document.createElement('th'),{rowSpan:2}));
+  thead.appendChild(hdrRow1);
+
+  // Row 2: Wt (lbs) | Reps per set
+  const hdrRow2=document.createElement('tr');
+  for(let si=0;si<maxSets;si++){
+    const wTh=document.createElement('th');wTh.textContent='Wt (lbs)';wTh.style.fontSize='0.7em';hdrRow2.appendChild(wTh);
+    const rTh=document.createElement('th');rTh.textContent='Reps';rTh.style.fontSize='0.7em';hdrRow2.appendChild(rTh);
+  }
+  thead.appendChild(hdrRow2);
+  table.appendChild(thead);
+
+  // ── Body rows ──
+  const tbody=document.createElement('tbody');
+  exercises.forEach((ex,ei)=>{
+    const tr=document.createElement('tr');
+    // Name cell
+    const nameTd=document.createElement('td');
+    const nameDiv=document.createElement('div');
+    nameDiv.className='ex-name-cell';nameDiv.contentEditable=true;
+    nameDiv.innerText=ex.name||'';
+    nameDiv.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();nameDiv.blur();}});
+    nameDiv.addEventListener('blur',()=>updateExName(p.id,pi,wi,di,ei,nameDiv));
+    if(!ex.name)setTimeout(()=>{if(nameDiv.isConnected)nameDiv.focus();},30);
+    nameTd.appendChild(nameDiv);tr.appendChild(nameTd);
+    // Scheme cell (e.g. "4x15" or "3x8 / drop set")
+    const schemeTd=document.createElement('td');
+    const schemeInput=document.createElement('textarea');
+    schemeInput.className='ex-cell-input';schemeInput.placeholder='4x15';
+    schemeInput.value=ex.scheme||'';
+    schemeInput.style.cssText='width:70px;min-height:32px;resize:none;line-height:1.4;vertical-align:middle;';
+    schemeInput.addEventListener('blur',()=>{ex.scheme=schemeInput.value;scheduleSync();});
+    schemeTd.appendChild(schemeInput);tr.appendChild(schemeTd);
+    // Set cells
+    for(let si=0;si<maxSets;si++){
+      const s=(ex.sets||[])[si]||{reps:'',weight:''};
+      const wTd=document.createElement('td');
+      const wInput=document.createElement('input');
+      wInput.type='text';wInput.className='ex-cell-input';wInput.placeholder='wt';
+      wInput.value=s.weight||'';wInput.style.width='52px';
+      wInput.addEventListener('blur',()=>updateSet(p.id,pi,wi,di,ei,si,'weight',wInput.value));
+      wTd.appendChild(wInput);tr.appendChild(wTd);
+      const rTd=document.createElement('td');
+      const rInput=document.createElement('input');
+      rInput.type='text';rInput.className='ex-cell-input';rInput.placeholder='reps';
+      rInput.value=s.reps||'';rInput.style.width='46px';
+      rInput.addEventListener('blur',()=>updateSet(p.id,pi,wi,di,ei,si,'reps',rInput.value));
+      rTd.appendChild(rInput);tr.appendChild(rTd);
+    }
+    // Empty "+ Set" cell
+    tr.appendChild(document.createElement('td'));
+    // Delete row btn
+    const delTd=document.createElement('td');
+    const delBtn=document.createElement('button');delBtn.className='ex-row-del';delBtn.textContent='✕';
+    delBtn.onclick=()=>deleteExercise(p.id,pi,wi,di,ei);
+    delTd.appendChild(delBtn);tr.appendChild(delTd);
+    tbody.appendChild(tr);
+  });
+
+  // ── Add exercise row ──
+  const addTr=document.createElement('tr');
+  const addTd=document.createElement('td');addTd.colSpan=2+maxSets*2+1;addTd.style.padding='4px 6px';
+  const addExBtn=document.createElement('button');addExBtn.className='add-btn';
+  addExBtn.style.cssText='font-size:0.68em;padding:3px 8px;width:100%';
+  addExBtn.textContent='+ Exercise';
+  addExBtn.onclick=()=>addExercise(p.id,pi,wi,di);
+  addTd.appendChild(addExBtn);addTr.appendChild(addTd);
+  tbody.appendChild(addTr);
+  table.appendChild(tbody);wrap.appendChild(table);container.appendChild(wrap);
+}
+
+// Add a set column to every exercise in this day
+function addSetColumn(pid,pi,wi,di){
+  const p=data.plans.find(x=>x.id===pid);if(!p)return;
+  const day=p.phases[pi].weeks[wi].days[di];
+  (day.exercises||[]).forEach(ex=>{
+    if(!ex.sets)ex.sets=[];
+    ex.sets.push({reps:'',weight:'',notes:''});
+  });
+  scheduleSync();renderPlanPhases(p);
+  // Re-open the day panel
+  const key=`${pid}-${pi}-${wi}-${di}`;
+  const dayEl=document.getElementById('day-ex-'+key);
+  if(dayEl)dayEl.classList.add('open');
+}
+
+// Plan edit actions
+function addPhase(pid){const p=data.plans.find(x=>x.id===pid);if(!p)return;if(!p.phases)p.phases=[];p.phases.push({name:'Phase '+(p.phases.length+1),weeks:[]});scheduleSync();renderPlansList();}
+function deletePhase(pid,pi){const p=data.plans.find(x=>x.id===pid);if(!p)return;p.phases.splice(pi,1);scheduleSync();renderPlansList();}
+function updatePhaseName(pid,pi,el){const p=data.plans.find(x=>x.id===pid);if(p&&p.phases[pi])p.phases[pi].name=el.innerText.trim()||'Phase '+(pi+1);scheduleSync();}
+function addWeek(pid,pi){const p=data.plans.find(x=>x.id===pid);if(!p)return;p.phases[pi].weeks.push({name:'Week '+(p.phases[pi].weeks.length+1),days:[]});scheduleSync();renderPlansList();}
+function deleteWeek(pid,pi,wi){const p=data.plans.find(x=>x.id===pid);if(!p)return;p.phases[pi].weeks.splice(wi,1);scheduleSync();renderPlansList();}
+function updateWeekName(pid,pi,wi,el){const p=data.plans.find(x=>x.id===pid);if(p&&p.phases[pi]&&p.phases[pi].weeks[wi])p.phases[pi].weeks[wi].name=el.innerText.trim();scheduleSync();}
+function addWorkoutDay(pid,pi,wi){
+  const p=data.plans.find(x=>x.id===pid);if(!p)return;
+  const defaultExercises=[
+    {id:uid(),name:'',scheme:'',sets:[{reps:'',weight:'',notes:''}]},
+    {id:uid(),name:'',scheme:'',sets:[{reps:'',weight:'',notes:''}]},
+    {id:uid(),name:'',scheme:'',sets:[{reps:'',weight:'',notes:''}]},
+  ];
+  p.phases[pi].weeks[wi].days.push({name:'Day '+(p.phases[pi].weeks[wi].days.length+1),exercises:defaultExercises});
+  scheduleSync();renderPlansList();
+}
+function deleteDay(pid,pi,wi,di){const p=data.plans.find(x=>x.id===pid);if(!p)return;p.phases[pi].weeks[wi].days.splice(di,1);scheduleSync();renderPlansList();}
+function updateDayName(pid,pi,wi,di,el){const p=data.plans.find(x=>x.id===pid);if(p)p.phases[pi].weeks[wi].days[di].name=el.innerText.trim();scheduleSync();}
+function addExercise(pid,pi,wi,di){
+  const p=data.plans.find(x=>x.id===pid);if(!p)return;
+  const day=p.phases[pi].weeks[wi].days[di];
+  const maxSets=Math.max(1,...(day.exercises||[]).map(ex=>(ex.sets||[]).length));
+  const sets=Array.from({length:maxSets},()=>({reps:'',weight:'',notes:''}));
+  day.exercises.push({id:uid(),name:'',scheme:'',sets});
+  scheduleSync();renderPlanPhases(p);
+  // Keep day open and scroll to new row
+  setTimeout(()=>{
+    const key=pid+'-'+pi+'-'+wi+'-'+di;
+    const dayEl=document.getElementById('day-ex-'+key);if(dayEl)dayEl.classList.add('open');
+    const container=document.getElementById('exercises-'+key);
+    if(container){const rows=container.querySelectorAll('.ex-name-cell');const last=rows[rows.length-1];if(last)last.focus();}
+  },50);
+}
+function deleteExercise(pid,pi,wi,di,ei){const p=data.plans.find(x=>x.id===pid);if(!p)return;p.phases[pi].weeks[wi].days[di].exercises.splice(ei,1);scheduleSync();renderPlansList();}
+function updateExName(pid,pi,wi,di,ei,el){const p=data.plans.find(x=>x.id===pid);if(p)p.phases[pi].weeks[wi].days[di].exercises[ei].name=el.innerText.trim();scheduleSync();}
+function addSet(pid,pi,wi,di,ei){const p=data.plans.find(x=>x.id===pid);if(!p)return;p.phases[pi].weeks[wi].days[di].exercises[ei].sets.push({reps:'',weight:'',notes:''});scheduleSync();renderPlansList();}
+function removeSet(pid,pi,wi,di,ei,si){const p=data.plans.find(x=>x.id===pid);if(!p)return;p.phases[pi].weeks[wi].days[di].exercises[ei].sets.splice(si,1);if(!p.phases[pi].weeks[wi].days[di].exercises[ei].sets.length)p.phases[pi].weeks[wi].days[di].exercises[ei].sets.push({reps:'',weight:'',notes:''});scheduleSync();renderPlansList();}
+function updateSet(pid,pi,wi,di,ei,si,field,val){const p=data.plans.find(x=>x.id===pid);if(!p)return;const ex=p.phases[pi].weeks[wi].days[di].exercises[ei];if(!ex.sets[si])ex.sets[si]={reps:'',weight:'',notes:''};ex.sets[si][field]=val;scheduleSync();}
+
+// Plan modal
+function openPlanModal(id){
+  _editPlanId=id||null;
+  const p=id?data.plans.find(x=>x.id===id):null;
+  document.getElementById('planModalTitle').textContent=p?'Edit Plan':'New Plan';
+  document.getElementById('planName').value=p?p.name:'';
+  document.getElementById('planDesc').value=p?p.desc||'':'';
+  document.getElementById('planDeleteBtn').style.display=p?'':'none';
+  buildColorPicker('planColorPicker',PLAN_COLORS,p?p.color:PLAN_COLORS[0]);
+  document.getElementById('planOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('planName').focus(),50);
+}
+function closePlanModal(){document.getElementById('planOverlay').classList.remove('open');_editPlanId=null;}
+function savePlan(){
+  const name=document.getElementById('planName').value.trim();if(!name)return;
+  const color=document.querySelector('#planColorPicker .pc-swatch.selected')?.dataset.color||PLAN_COLORS[0];
+  if(_editPlanId){const p=data.plans.find(x=>x.id===_editPlanId);if(p){p.name=name;p.desc=document.getElementById('planDesc').value.trim();p.color=color;}}
+  else data.plans.push({id:uid(),name,desc:document.getElementById('planDesc').value.trim(),color,phases:[]});
+  closePlanModal();scheduleSync();renderPlans();
+}
+function deletePlan(){if(!_editPlanId||!confirm('Delete this plan?'))return;data.plans=data.plans.filter(x=>x.id!==_editPlanId);closePlanModal();scheduleSync();renderPlans();}
+
+// Activate plan → create instance
+function activatePlan(pid){
+  const p=data.plans.find(x=>x.id===pid);if(!p)return;
+  const instance={id:uid(),planId:pid,planName:p.name,planColor:p.color||PLAN_COLORS[0],startDate:new Date().toISOString().slice(0,10),logs:{},status:'active'};
+  if(!data.instances)data.instances=[];
+  data.instances.push(instance);
+  scheduleSync();renderPlans();
+  // Switch to plans tab and scroll to instances
+  alert(`"${p.name}" activated! Find it in Active Logs below to start logging sessions.`);
+}
+
+// ── Instances ──
+function renderInstancesList(){
+  const list=document.getElementById('instancesList');
+  const active=(data.instances||[]).filter(i=>i.status==='active');
+  const completed=(data.instances||[]).filter(i=>i.status==='complete');
+  if(!active.length&&!completed.length){list.innerHTML='<div style="font-size:0.82em;color:var(--text3);padding:8px 0">No active logs. Activate a plan above to start.</div>';return;}
+  list.innerHTML='';
+  [...active,...completed].forEach(inst=>{
+    const card=document.createElement('div');card.className='instance-card';
+    const plan=data.plans.find(x=>x.id===inst.planId);
+    const allDays=[];
+    (plan?.phases||[]).forEach((ph,pi)=>(ph.weeks||[]).forEach((w,wi)=>(w.days||[]).forEach((d,di)=>{
+      allDays.push({key:`${pi}-${wi}-${di}`,name:d.name,phaseName:ph.name,weekName:w.name,exercises:d.exercises||[]});
+    })));
+    const doneCount=Object.keys(inst.logs||{}).length;
+    card.innerHTML=`<div class="instance-hdr">
+      <div style="width:4px;height:32px;border-radius:2px;background:${inst.planColor||'var(--orange)'};flex-shrink:0"></div>
+      ${inst.status==='active'?'<span class="instance-badge">ACTIVE</span>':'<span class="instance-badge" style="background:var(--surface3);color:var(--text3)">DONE</span>'}
+      <div style="flex:1"><div class="instance-title">${escHtml(inst.planName)}</div><div class="instance-meta">Started ${inst.startDate} · ${doneCount}/${allDays.length} sessions logged</div></div>
+      ${inst.status==='active'?`<button class="plan-btn" onclick="completeInstance('${inst.id}')">Mark Complete</button>`:''}
+      <button class="del-btn" onclick="deleteInstance('${inst.id}')">✕</button>
+    </div>
+    <div id="inst-days-${inst.id}"></div>`;
+    list.appendChild(card);
+    renderInstanceDays(inst,allDays);
+  });
+}
+
+function renderInstanceDays(inst,allDays){
+  const container=document.getElementById('inst-days-'+inst.id);if(!container)return;
+  if(!allDays.length){container.innerHTML='<div style="font-size:0.78em;color:var(--text3);padding:10px 14px">Plan has no workout days yet.</div>';return;}
+  allDays.forEach(day=>{
+    const logged=inst.logs&&inst.logs[day.key];
+    const lastEntry=logged?logged[logged.length-1]:null;
+    const row=document.createElement('div');row.className='log-day-row';
+    row.innerHTML=`
+      <div>
+        <div class="log-day-name">${escHtml(day.name)}</div>
+        <div style="font-size:0.65em;color:var(--text3)">${escHtml(day.phaseName)} · ${escHtml(day.weekName)}</div>
+        ${lastEntry?`<div style="font-size:0.65em;color:var(--orange);margin-top:2px">Last: ${lastEntry.date}</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <span class="log-day-status ${logged?'log-done':'log-pending'}">${logged?'✓ Logged':'Pending'}</span>
+        <button class="log-session-btn" onclick="openLogSession('${inst.id}','${day.key}')">Log</button>
+      </div>`;
+    container.appendChild(row);
+  });
+}
+
+function completeInstance(id){if(!confirm('Mark this log as complete?'))return;const inst=(data.instances||[]).find(x=>x.id===id);if(inst)inst.status='complete';scheduleSync();renderPlans();}
+function deleteInstance(id){if(!confirm('Delete this log? All session data will be lost.'))return;data.instances=(data.instances||[]).filter(x=>x.id!==id);scheduleSync();renderPlans();}
+
+// Log session
+let _logInstId=null,_logDayKey=null;
+function openLogSession(instId,dayKey){
+  _logInstId=instId;_logDayKey=dayKey;
+  const inst=(data.instances||[]).find(x=>x.id===instId);if(!inst)return;
+  const plan=data.plans.find(x=>x.id===inst.planId);
+  const [pi,wi,di]=dayKey.split('-').map(Number);
+  const day=plan?.phases[pi]?.weeks[wi]?.days[di];
+  document.getElementById('logSessionTitle').textContent=day?day.name:'Log Session';
+  document.getElementById('logSessionSubtitle').textContent=day?`${plan.phases[pi].name} · ${plan.phases[pi].weeks[wi].name}`:'';
+  document.getElementById('logSessionNotes').value='';
+  // Build exercise log inputs
+  const body=document.getElementById('logSessionBody');body.innerHTML='';
+  // Prefill from last log if exists
+  const lastLog=(inst.logs&&inst.logs[dayKey])?inst.logs[dayKey][inst.logs[dayKey].length-1]:null;
+  (day?.exercises||[]).forEach((ex,ei)=>{
+    const prevSets=(lastLog&&lastLog.exercises&&lastLog.exercises[ei]&&lastLog.exercises[ei].sets)||ex.sets||[];
+    const div=document.createElement('div');div.className='log-exercise-row';
+    const setsGrid=`<div class="log-sets-grid">
+      <div class="log-sets-hdr">Set</div><div class="log-sets-hdr">Reps</div><div class="log-sets-hdr">Weight</div><div class="log-sets-hdr">Notes</div>
+      ${prevSets.map((s,si)=>`
+        <div class="log-set-num">${si+1}</div>
+        <input type="text" class="log-input" placeholder="${s.reps||'—'}" data-ex="${ei}" data-set="${si}" data-field="reps">
+        <input type="text" class="log-input" placeholder="${s.weight||'—'}" data-ex="${ei}" data-set="${si}" data-field="weight">
+        <input type="text" class="log-input" placeholder="note" data-ex="${ei}" data-set="${si}" data-field="notes">
+      `).join('')}
+    </div>`;
+    div.innerHTML=`<div class="log-ex-name">${escHtml(ex.name||'Exercise '+(ei+1))}</div>${setsGrid}`;
+    body.appendChild(div);
+  });
+  document.getElementById('logSessionOverlay').classList.add('open');
+}
+function closeLogSession(){document.getElementById('logSessionOverlay').classList.remove('open');_logInstId=null;_logDayKey=null;}
+function saveLogSession(){
+  const inst=(data.instances||[]).find(x=>x.id===_logInstId);if(!inst)return;
+  const plan=data.plans.find(x=>x.id===inst.planId);
+  const [pi,wi,di]=_logDayKey.split('-').map(Number);
+  const day=plan?.phases[pi]?.weeks[wi]?.days[di];
+  if(!inst.logs)inst.logs={};
+  if(!inst.logs[_logDayKey])inst.logs[_logDayKey]=[];
+  // Collect logged values
+  const exercises=(day?.exercises||[]).map((ex,ei)=>{
+    const sets=(ex.sets||[]).map((s,si)=>{
+      const repsEl=document.querySelector(`input[data-ex="${ei}"][data-set="${si}"][data-field="reps"]`);
+      const weightEl=document.querySelector(`input[data-ex="${ei}"][data-set="${si}"][data-field="weight"]`);
+      const notesEl=document.querySelector(`input[data-ex="${ei}"][data-set="${si}"][data-field="notes"]`);
+      return {
+        reps:repsEl?repsEl.value||repsEl.placeholder:'',
+        weight:weightEl?weightEl.value||weightEl.placeholder:'',
+        notes:notesEl?notesEl.value:''
+      };
+    });
+    return {name:ex.name,sets};
+  });
+  inst.logs[_logDayKey].push({date:new Date().toISOString().slice(0,10),exercises,sessionNotes:document.getElementById('logSessionNotes').value});
+  closeLogSession();scheduleSync();renderPlans();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  PROGRESS (PR TRACKER)
+// ══════════════════════════════════════════════════════════════════
+let _editPRId=null,_logPRId=null;
+
+function renderProgress(){
+  const list=document.getElementById('prList');
+  if(!data.prMetrics||!data.prMetrics.length){list.innerHTML='<div class="empty-state"><div class="ei">🏋️</div>No metrics yet.<br>Add a PR metric to start tracking.</div>';return;}
+  list.innerHTML='';
+  data.prMetrics.forEach(m=>{
+    const entries=(m.entries||[]).sort((a,b)=>a.date.localeCompare(b.date));
+    const latest=entries[entries.length-1];
+    const prev=entries[entries.length-2];
+    let delta=null;
+    if(latest&&prev){delta=parseFloat(latest.value)-parseFloat(prev.value);}
+    const card=document.createElement('div');card.className='pr-card';
+    const deltaHtml=delta!==null?`<span class="${delta>=0?'pr-delta-pos':'pr-delta-neg'}">${delta>=0?'↑':'↓'}${Math.abs(delta).toFixed(1)}</span>`:'';
+    card.innerHTML=`<div class="pr-hdr">
+      <div style="flex:1">
+        <div class="pr-name">${escHtml(m.name)}</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <div class="pr-current">${latest?latest.value:'—'}</div>
+          <div class="pr-unit">${escHtml(m.unit||'')} ${deltaHtml}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-direction:column;align-items:flex-end">
+        <button class="log-session-btn" onclick="openPRLog('${m.id}')">+ Log</button>
+        <button class="plan-btn" onclick="openPRModal('${m.id}')">Edit</button>
+      </div>
+    </div>`;
+    // Sparkline chart
+    if(entries.length>1){
+      const chartDiv=document.createElement('div');chartDiv.className='pr-chart';
+      const svg=buildSparkline(entries,m.dir||'up');chartDiv.appendChild(svg);
+      card.appendChild(chartDiv);
+    }
+    // Log entries
+    if(entries.length){
+      const logDiv=document.createElement('div');logDiv.className='pr-log-list';
+      [...entries].reverse().slice(0,8).forEach((e,i)=>{
+        const prev2=entries[entries.length-1-i-1];
+        const d2=prev2?parseFloat(e.value)-parseFloat(prev2.value):null;
+        const dHtml=d2!==null?`<span class="${d2>=0?'pr-delta-pos':'pr-delta-neg'}">${d2>=0?'↑':'↓'}${Math.abs(d2).toFixed(1)}</span>`:'';
+        logDiv.innerHTML+=`<div class="pr-log-row"><div class="pr-log-date">${e.date}</div><div class="pr-log-val">${e.value} ${escHtml(m.unit||'')}${dHtml}</div><div class="pr-log-note">${escHtml(e.note||'')}</div></div>`;
+      });
+      card.appendChild(logDiv);
+    }
+    list.appendChild(card);
+  });
+}
+
+function buildSparkline(entries,dir){
+  const vals=entries.map(e=>parseFloat(e.value)).filter(v=>!isNaN(v));
+  if(vals.length<2)return document.createElementNS('http://www.w3.org/2000/svg','svg');
+  const W=300,H=60,pad=4;
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.style.width='100%';svg.style.height='60px';
+  const minV=Math.min(...vals),maxV=Math.max(...vals),range=maxV-minV||1;
+  const pts=vals.map((v,i)=>{
+    const x=pad+(i/(vals.length-1))*(W-pad*2);
+    const y=H-pad-((v-minV)/range)*(H-pad*2);
+    return `${x},${y}`;
+  });
+  const lastColor=vals[vals.length-1]>=vals[0]?(dir==='up'?'#22c55e':'#ef4444'):(dir==='up'?'#ef4444':'#22c55e');
+  // Area fill
+  const area=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  area.setAttribute('points',pts.join(' '));area.setAttribute('fill','none');area.setAttribute('stroke',lastColor);area.setAttribute('stroke-width','2');area.setAttribute('stroke-linejoin','round');
+  svg.appendChild(area);
+  // Last point dot
+  const lastPt=pts[pts.length-1].split(',');
+  const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  dot.setAttribute('cx',lastPt[0]);dot.setAttribute('cy',lastPt[1]);dot.setAttribute('r','3');dot.setAttribute('fill',lastColor);
+  svg.appendChild(dot);
+  return svg;
+}
+
+function openPRModal(id){
+  _editPRId=id||null;
+  const m=id?data.prMetrics.find(x=>x.id===id):null;
+  document.getElementById('prModalTitle').textContent=m?'Edit Metric':'New Metric';
+  document.getElementById('prName').value=m?m.name:'';
+  document.getElementById('prUnit').value=m?m.unit||'':'';
+  document.getElementById('prDir').value=m?m.dir||'up':'up';
+  document.getElementById('prDeleteBtn').style.display=m?'':'none';
+  document.getElementById('prOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('prName').focus(),50);
+}
+function closePRModal(){document.getElementById('prOverlay').classList.remove('open');_editPRId=null;}
+function savePR(){
+  const name=document.getElementById('prName').value.trim();if(!name)return;
+  if(!data.prMetrics)data.prMetrics=[];
+  if(_editPRId){const m=data.prMetrics.find(x=>x.id===_editPRId);if(m){m.name=name;m.unit=document.getElementById('prUnit').value.trim();m.dir=document.getElementById('prDir').value;}}
+  else data.prMetrics.push({id:uid(),name,unit:document.getElementById('prUnit').value.trim(),dir:document.getElementById('prDir').value,entries:[]});
+  closePRModal();scheduleSync();renderProgress();
+}
+function deletePR(){if(!_editPRId||!confirm('Delete this metric and all its history?'))return;data.prMetrics=data.prMetrics.filter(x=>x.id!==_editPRId);closePRModal();scheduleSync();renderProgress();}
+
+function openPRLog(id){
+  _logPRId=id;
+  const m=data.prMetrics.find(x=>x.id===id);if(!m)return;
+  document.getElementById('prLogTitle').textContent='Log — '+m.name;
+  document.getElementById('prLogVal').value='';
+  document.getElementById('prLogDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('prLogNote').value='';
+  document.getElementById('prLogOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('prLogVal').focus(),50);
+}
+function closePRLog(){document.getElementById('prLogOverlay').classList.remove('open');_logPRId=null;}
+function savePRLog(){
+  const val=document.getElementById('prLogVal').value.trim();if(!val)return;
+  const m=data.prMetrics.find(x=>x.id===_logPRId);if(!m)return;
+  if(!m.entries)m.entries=[];
+  m.entries.push({date:document.getElementById('prLogDate').value||new Date().toISOString().slice(0,10),value:val,note:document.getElementById('prLogNote').value.trim()});
+  closePRLog();scheduleSync();renderProgress();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  GOALS
+// ══════════════════════════════════════════════════════════════════
+let _editGoalId=null;
+
+function renderGoals(){
+  const list=document.getElementById('goalsList');
+  if(!data.goals||!data.goals.length){list.innerHTML='<div class="empty-state"><div class="ei">🎯</div>No goals yet.<br>Add a long-term fitness goal.</div>';return;}
+  list.innerHTML='';
+  data.goals.forEach(g=>{
+    const card=document.createElement('div');card.className='goal-card';
+    const statusCls={active:'gs-active',achieved:'gs-achieved',planned:'gs-planned'}[g.status||'planned']||'gs-planned';
+    const statusLbl={active:'Active',achieved:'Achieved ✓',planned:'Planned'}[g.status||'planned'];
+    const daysLeft=g.targetDate?Math.round((new Date(g.targetDate+'T00:00:00')-new Date())/86400000):null;
+    card.innerHTML=`<div class="goal-card-hdr" onclick="toggleGoalBody('${g.id}')">
+      <div class="goal-accent" style="background:${g.color||GOAL_COLORS[0]}"></div>
+      <div style="flex:1">
+        <div class="goal-title">${escHtml(g.name)}</div>
+        ${g.targetDate?`<div style="font-size:0.68em;color:var(--text3);margin-top:2px">📅 ${g.targetDate}${daysLeft!==null?' · '+(daysLeft>0?daysLeft+' days away':daysLeft===0?'Today!':'Past target'):''}</div>`:''}
+      </div>
+      <span class="goal-status ${statusCls}">${statusLbl}</span>
+      <button class="plan-btn" style="margin-left:6px" onclick="event.stopPropagation();openGoalModal('${g.id}')">Edit</button>
+    </div>
+    <div class="goal-body" id="goal-body-${g.id}">
+      <div class="goal-desc" contenteditable="true" onblur="updateGoalNotes('${g.id}',this)">${escHtml(g.notes||'')}</div>
+    </div>`;
+    list.appendChild(card);
+  });
+}
+function toggleGoalBody(id){const b=document.getElementById('goal-body-'+id);if(b)b.classList.toggle('open');}
+function updateGoalNotes(id,el){const g=(data.goals||[]).find(x=>x.id===id);if(g)g.notes=el.innerText;scheduleSync();}
+
+function openGoalModal(id){
+  _editGoalId=id||null;
+  const g=id?data.goals.find(x=>x.id===id):null;
+  document.getElementById('goalModalTitle').textContent=g?'Edit Goal':'New Goal';
+  document.getElementById('goalName').value=g?g.name:'';
+  document.getElementById('goalDate').value=g?g.targetDate||'':'';
+  document.getElementById('goalStatus').value=g?g.status||'planned':'planned';
+  document.getElementById('goalDeleteBtn').style.display=g?'':'none';
+  buildColorPicker('goalColorPicker',GOAL_COLORS,g?g.color:GOAL_COLORS[0]);
+  document.getElementById('goalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('goalName').focus(),50);
+}
+function closeGoalModal(){document.getElementById('goalOverlay').classList.remove('open');_editGoalId=null;}
+function saveGoal(){
+  const name=document.getElementById('goalName').value.trim();if(!name)return;
+  const color=document.querySelector('#goalColorPicker .pc-swatch.selected')?.dataset.color||GOAL_COLORS[0];
+  if(!data.goals)data.goals=[];
+  if(_editGoalId){const g=data.goals.find(x=>x.id===_editGoalId);if(g){g.name=name;g.targetDate=document.getElementById('goalDate').value;g.status=document.getElementById('goalStatus').value;g.color=color;}}
+  else data.goals.push({id:uid(),name,targetDate:document.getElementById('goalDate').value,status:document.getElementById('goalStatus').value,color,notes:''});
+  closeGoalModal();scheduleSync();renderGoals();
+}
+function deleteGoal(){if(!_editGoalId||!confirm('Delete this goal?'))return;data.goals=data.goals.filter(x=>x.id!==_editGoalId);closeGoalModal();scheduleSync();renderGoals();}
+
+// ══════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════════════════════════════════
+function buildColorPicker(containerId,colors,selected){
+  const el=document.getElementById(containerId);el.innerHTML='';
+  colors.forEach(c=>{
+    const sw=document.createElement('div');sw.className='pc-swatch'+(c===selected?' selected':'');
+    sw.style.background=c;sw.dataset.color=c;
+    sw.onclick=()=>{el.querySelectorAll('.pc-swatch').forEach(x=>x.classList.remove('selected'));sw.classList.add('selected');};
+    el.appendChild(sw);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  RENDER ALL
+// ══════════════════════════════════════════════════════════════════
+function render(){renderSchedule();renderPlans();renderProgress();renderGoals();}
+
+// ══════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════
+async function initApp(){
+  loadLocal();render();
+  const remote=await loadFromDropbox();
+  if(remote==='empty'){await saveToDropbox();}
+  else if(remote!==null){
+    data=remote;
+    try{localStorage.setItem('fg_data',JSON.stringify(data));}catch(e){}
+    render();
+  }
+}
+
+window.onload=async()=>{
+  const params=new URLSearchParams(window.location.search);
+  const code=params.get('code'),oauthErr=params.get('error');
+  if(oauthErr){window.history.replaceState({},document.title,window.location.pathname);showConnectScreen();document.getElementById('connectErr').innerText='Connection cancelled.';document.getElementById('connectErr').classList.add('show');return;}
+  if(code){
+    try{
+      await handleOAuthCallback(code);hideConnectScreen();
+      const app=document.getElementById('app');app.style.display='flex';app.style.flexDirection='column';app.style.height='100%';
+      await initApp();
+    }catch(e){window.history.replaceState({},document.title,window.location.pathname);showConnectScreen();document.getElementById('connectErr').innerText='Connection failed: '+e.message;document.getElementById('connectErr').classList.add('show');}
+    return;
+  }
+  if(!isConnected()){showConnectScreen();return;}
+  hideConnectScreen();
+  const app=document.getElementById('app');app.style.display='flex';app.style.flexDirection='column';app.style.height='100%';
+  await initApp();
+};
+</script>
+</body>
+</html>
