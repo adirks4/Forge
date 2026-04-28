@@ -500,7 +500,7 @@ async function sha256(s){return crypto.subtle.digest('SHA-256',_e.encode(s));}
 function randStr(n=64){const a=new Uint8Array(n);crypto.getRandomValues(a);return b64url(a);}
 
 async function startOAuth(){
-  if(DBX_APP_KEY==='YOUR_APP_KEY_HERE'){
+  if(DBX_APP_KEY==='svs3trw79bajcjd'){
     document.getElementById('connectErr').innerText='App key not set — open the file and set DBX_APP_KEY.';
     document.getElementById('connectErr').classList.add('show');return;
   }
